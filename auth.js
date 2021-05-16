@@ -1,58 +1,28 @@
-//under controller
-exports.signup = (req, res) => {
-  const errors = validationResult(req);
+//Route auth.js
+var express = require("express");
+var router = express.Router();
+const { check, validationResult } = require("express-validator");
+const { signout, signup, signin, isSignedIn } = require("../controllers/auth");
 
-  if (!errors.isEmpty()) {
-    return res.status(422).json({
-      error: errors.array()[0].msg
-    });
-  }
+router.post(
+  "/signup",
+  [
+    check("name", "name should be at least 3 char").isLength({ min: 3 }),
+    check("email", "email is required").isEmail(),
+    check("password", "password should be at least 3 char").isLength({ min: 3 })
+  ],
+  signup
+);
 
-  const user = new User(req.body);
-  user.save((err, user) => {
-    if (err) {
-      return res.status(400).json({
-        err: "NOT able to save user in DB"
-      });
-    }
-    res.json({
-      name: user.name,
-      email: user.email,
-      id: user._id
-    });
-  });
-};
-//
-exports.signin = (req, res) => {
-  const errors = validationResult(req);
-  const { email, password } = req.body;
+router.post(
+  "/signin",
+  [
+    check("email", "email is required").isEmail(),
+    check("password", "password field is required").isLength({ min: 1 })
+  ],
+  signin
+);
 
-  if (!errors.isEmpty()) {
-    return res.status(422).json({
-      error: errors.array()[0].msg
-    });
-  }
+router.get("/signout", signout);
 
-  User.findOne({ email }, (err, user) => {
-    if (err || !user) {
-      return res.status(400).json({
-        error: "USER email does not exists"
-      });
-    }
-
-    if (!user.autheticate(password)) {
-      return res.status(401).json({
-        error: "Email and password do not match"
-      });
-    }
-
-    //create token
-    const token = jwt.sign({ _id: user._id }, process.env.SECRET);
-    //put token in cookie
-    res.cookie("token", token, { expire: new Date() + 9999 });
-
-    //send response to front end
-    const { _id, name, email, role } = user;
-    return res.json({ token, user: { _id, name, email, role } });
-  });
-};
+module.exports = router;
